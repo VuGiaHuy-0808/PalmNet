@@ -1,8 +1,9 @@
-
 import glob
 import time
 import numpy as np
+import cv2
 from loadImages import loadImages
+from loadImages import im2double_matlab
 from checkMinNumSamplePerInd import checkMinNumSamplePerInd
 from computeLabels import computeLabels
 from getNumSamplePerInd import getNumSamplePerInd
@@ -11,18 +12,23 @@ from adjustFormat import adjustFormat
 from searchGaborOrientation import searchGaborOrientation
 from findBestWaveletsTesting import findBestWaveletsTesting
 from featExtrGaborAdapt import featExtrGaborAdapt
+from fastEuclideanDistance import fastEuclideanDistance
 import paramsPalmNet as param
+import math
+from Gabor_FeaExt import Gabor_FeaExt
+from scipy.io import savemat, loadmat
+from scipy.sparse import save_npz, load_npz, csr_matrix
 
 # --------------------------------
 # General parameters
 numCoresKnn = 2
 stepPrint = 100
-
+# model = loadmat('model.mat')
 # --------------------------------
 # Directory of DataBase
 ext = 'bmp'
 dbName = 'Tongji_Contactless_Palmprint_Dataset'
-dirDB = 'D:\PalmNet\PalmNet-master\images\Tongji_Contactless_Palmprint_Dataset'
+dirDB = 'C:\PalmNet_Matlab\PalmNet\images\Tongji_Contactless_Palmprint_Dataset'
 path = dirDB + '/*.' + ext
 
 # --------------------------------
@@ -42,6 +48,46 @@ numInd = len(np.unique(labels))
 # Compute number of samples per individual
 numSampleMean = getNumSamplePerInd(files)
 
+# ----------------------------------
+#   KNN Test
+
+# Load image
+im = cv2.imread(dirDB + "\\" + "0001_0001.bmp")
+if im.shape[2] == 3:
+    im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    im2double = im2double_matlab(im)
+
+# adjust format
+closPow2 = int(math.pow(2, math.floor(math.log2(im.shape[0]))))
+imageSize = (closPow2, closPow2)
+# Back to rgb
+im = (im * 255).round().astype(np.uint8)
+# Cast
+im = im.astype(np.float64)
+# Resize image, must be power of 2
+im = cv2.resize(im, imageSize, interpolation=cv2.INTER_CUBIC)
+# Subtract mean
+im = im - cv2.mean(im)[0]
+
+# load model
+model = loadmat('model.mat')
+bestWaveletsAll = []
+for i in range(model['bestWaveletsAll'][0].shape[0]):
+    bestWaveletsAll.append(model['bestWaveletsAll'][0][i])
+
+# load feature map
+featureMap = load_npz('.\Model\mapFeature.npz')
+
+# feature extraction
+fTest, _ = Gabor_FeaExt(im, param, bestWaveletsAll)
+fTest = csr_matrix(fTest).transpose()
+
+# compute distMatrix
+distMat = fastEuclideanDistance(featureMap, fTest).flatten()
+ind = np.argsort(distMat)
+
+
+#__________________ SUCCESS _____________________________________
 # ------------------------------------
 # Display
 print('\n')
@@ -60,7 +106,8 @@ for r in range(param.numIterations):
 
     # -----------------------------
     # Compute random person-fold indexes
-    indexesFold, allIndexes, indImagesTrain, indImagesTest, numImageTrain, numImageTest = computeIndexesPersonFold(numImageAll, labels)
+    indexesFold, allIndexes, indImagesTrain, indImagesTest, numImageTrain, numImageTest = computeIndexesPersonFold(
+        numImageAll, labels)
     # Corresponding labels
     TrnLabels = []
     TestLabels = []
@@ -99,21 +146,21 @@ for r in range(param.numIterations):
     # Search for orientations
     print('\t\tSearching for best orientations...')
     # default orientations by sampling
-    orient_default = np.linspace(0, 180 - int((180 / param.divTheta)), param.divTheta, dtype= int)
+    orient_default = np.linspace(0, 180 - int((180 / param.divTheta)), param.divTheta, dtype=int)
     # adaptive orientations by gradient
     orient_best = searchGaborOrientation(imagesCellTrain, param)
-
 
     # --------------------------------
     # Gabor analysis
     print('\t\tGabor analysis...')
     start = time.time()
-    bestWaveletsAll = findBestWaveletsTesting(imagesCellTrain, orient_default, orient_best, numImageTrain, imageSize, param)
+    bestWaveletsAll = findBestWaveletsTesting(imagesCellTrain, orient_default, orient_best, numImageTrain, imageSize,
+                                              param)
     end = time.time()
     print('\t\t\tGabor analysis time : ' + str(((end - start) / 60)) + ' minutes')
     print('\t\t\tTotal number of Gabor Wavelets : ' + str(param.PalmNet_numFilters[0]))
-
-
+    # savemat('model.mat', {'bestWaveletsAll': bestWaveletsAll})
+    # model = loadmat('model.mat')
     # ---------------------------------
     ############  Testing  #############
 
@@ -130,10 +177,11 @@ for r in range(param.numIterations):
     print('\tAdjusting format...')
     imagesCellTest, imageSize = adjustFormat(imagesCellTest)
 
-
     # ---------------------------------
     # Feature extraction
     print('\tFeature extraction...')
     fTest_all, numFeatures = featExtrGaborAdapt(imagesCellTest, param, bestWaveletsAll, numImageTest)
+    fTest_all = fTest_all.tocsr(True)
+    save_npz('.\Model\mapFeature.npz', fTest_all)
     sizeTest = fTest_all.shape[1]
 # print(indexesFold)

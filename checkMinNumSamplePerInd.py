@@ -5,7 +5,7 @@ def checkMinNumSamplePerInd (files):
     indexrem = []
     numSamplePerInd = np.zeros(shape=(len(files), 1), dtype= int)
 
-#    loop on files to compure num of samples for each ind
+#    loop on files to compute num of samples for each ind
     for i in range(len(files)):
         fileName = files[i]
         ind = int(fileName[:4])

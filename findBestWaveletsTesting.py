@@ -28,8 +28,8 @@ def findBestWaveletsTesting(imagesCell, orient_default, orient_best, numImagesTo
 
     # Init counter for how many times each wavelet is chosen
     o_counterAll = np.zeros((len(gaborBank.even), 1))
-
-    for j in range(1):
+    count = 0
+    for j in range(numImagesToUse):
 
         im = imagesCell[j]
 
@@ -51,7 +51,8 @@ def findBestWaveletsTesting(imagesCell, orient_default, orient_best, numImagesTo
 
         # Increment
         o_counterAll += o_counter
-
+        print(count)
+        count += 1
     #------------------------------
     # Sort most used filters counter
     o_counterAll = np.transpose(np.array(o_counterAll))

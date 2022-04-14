@@ -8,8 +8,7 @@ class ResFilter:
 def referenceGaborFilter(gaborBank, im):
 
     # init
-    resF = ResFilter;
-
+    resF = ResFilter()
     for g in range(len(gaborBank.even)):
 
         # Filtering arcording to paper
