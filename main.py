@@ -50,42 +50,42 @@ numSampleMean = getNumSamplePerInd(files)
 
 # ----------------------------------
 #   KNN Test
-
+#
 # Load image
-im = cv2.imread(dirDB + "\\" + "0001_0001.bmp")
-if im.shape[2] == 3:
-    im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    im2double = im2double_matlab(im)
-
-# adjust format
-closPow2 = int(math.pow(2, math.floor(math.log2(im.shape[0]))))
-imageSize = (closPow2, closPow2)
-# Back to rgb
-im = (im * 255).round().astype(np.uint8)
-# Cast
-im = im.astype(np.float64)
-# Resize image, must be power of 2
-im = cv2.resize(im, imageSize, interpolation=cv2.INTER_CUBIC)
-# Subtract mean
-im = im - cv2.mean(im)[0]
-
-# load model
-model = loadmat('model.mat')
-bestWaveletsAll = []
-for i in range(model['bestWaveletsAll'][0].shape[0]):
-    bestWaveletsAll.append(model['bestWaveletsAll'][0][i])
-
-# load feature map
-featureMap = load_npz('.\Model\mapFeature.npz')
-
-# feature extraction
-fTest, _ = Gabor_FeaExt(im, param, bestWaveletsAll)
-fTest = csr_matrix(fTest).transpose()
-
-# compute distMatrix
-distMat = fastEuclideanDistance(featureMap, fTest).flatten()
-ind = np.argsort(distMat)
-
+# im = cv2.imread(dirDB + "\\" + "0001_0001.bmp")
+# if im.shape[2] == 3:
+#     im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+#     im2double = im2double_matlab(im)
+#
+# # adjust format
+# closPow2 = int(math.pow(2, math.floor(math.log2(im2double.shape[0]))))
+# imageSize = (closPow2, closPow2)
+# # Back to rgb
+# im2double = (im2double * 255).round().astype(np.uint8)
+# # Cast
+# im2double = im2double.astype(np.float64)
+# # Resize image, must be power of 2
+# im2double = cv2.resize(im2double, imageSize, interpolation=cv2.INTER_CUBIC)
+# # Subtract mean
+# im2double = im2double - cv2.mean(im2double)[0]
+#
+# # load model
+# model = loadmat('model.mat')
+# bestWaveletsAll = []
+# for i in range(model['bestWaveletsAll'][0].shape[0]):
+#     bestWaveletsAll.append(model['bestWaveletsAll'][0][i])
+#
+# # load feature map
+# featureMap = load_npz('mapFeature.npz')
+#
+# # feature extraction
+# fTest, _ = Gabor_FeaExt(im, param, bestWaveletsAll)
+# fTest = csr_matrix(fTest).transpose()
+#
+# # compute distMatrix
+# distMat = fastEuclideanDistance(featureMap, fTest).flatten()
+# ind = np.argsort(distMat)
+#
 
 #__________________ SUCCESS _____________________________________
 # ------------------------------------
@@ -154,13 +154,13 @@ for r in range(param.numIterations):
     # Gabor analysis
     print('\t\tGabor analysis...')
     start = time.time()
-    bestWaveletsAll = findBestWaveletsTesting(imagesCellTrain, orient_default, orient_best, numImageTrain, imageSize,
-                                              param)
+    bestWaveletsAll = findBestWaveletsTesting(imagesCellTrain, orient_default, orient_best, numImageTrain, imageSize, param)
     end = time.time()
     print('\t\t\tGabor analysis time : ' + str(((end - start) / 60)) + ' minutes')
     print('\t\t\tTotal number of Gabor Wavelets : ' + str(param.PalmNet_numFilters[0]))
-    # savemat('model.mat', {'bestWaveletsAll': bestWaveletsAll})
-    # model = loadmat('model.mat')
+    savemat('model.mat', {'bestWaveletsAll': bestWaveletsAll})
+    model = loadmat('model.mat')
+
     # ---------------------------------
     ############  Testing  #############
 
@@ -171,6 +171,9 @@ for r in range(param.numIterations):
     # Load images for testing
     print('\tLoading images for testing...')
     imagesCellTest, filenameTest = loadImages(files, dirDB, allIndexes, indImagesTest, numImageTest)
+    with open('filenameTest.txt', 'w') as f:
+        for item in filenameTest:
+            f.write("%s\n" % item)
 
     # ---------------------------------
     # Adjusting format
@@ -182,6 +185,7 @@ for r in range(param.numIterations):
     print('\tFeature extraction...')
     fTest_all, numFeatures = featExtrGaborAdapt(imagesCellTest, param, bestWaveletsAll, numImageTest)
     fTest_all = fTest_all.tocsr(True)
-    save_npz('.\Model\mapFeature.npz', fTest_all)
+    save_npz('mapFeature.npz', fTest_all)
+    featureMap = load_npz('mapFeature.npz')
     sizeTest = fTest_all.shape[1]
 # print(indexesFold)
