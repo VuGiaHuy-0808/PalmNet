@@ -3,7 +3,10 @@ import numpy as np
 
 def personFold (numSamples, labels):
 
-    foldPerPerson = np.random.randint(1, 3, (max(labels)[0], 1))
+    foldPerPerson = np.ones(max(labels))
+    foldPerPerson[:240] = 2
+    np.random.shuffle(foldPerPerson)
+    # foldPerPerson = np.random.randint(1, 3, (max(labels)[0], 1))
 
     # init
     Indexes = np.zeros(shape=(numSamples, 1), dtype= int)

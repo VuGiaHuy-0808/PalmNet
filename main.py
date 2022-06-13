@@ -2,6 +2,7 @@ import glob
 import time
 import numpy as np
 import cv2
+import csv
 from loadImages import loadImages
 from loadImages import im2double_matlab
 from checkMinNumSamplePerInd import checkMinNumSamplePerInd
@@ -14,10 +15,13 @@ from findBestWaveletsTesting import findBestWaveletsTesting
 from featExtrGaborAdapt import featExtrGaborAdapt
 from fastEuclideanDistance import fastEuclideanDistance
 import paramsPalmNet as param
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import math
 from Gabor_FeaExt import Gabor_FeaExt
 from scipy.io import savemat, loadmat
 from scipy.sparse import save_npz, load_npz, csr_matrix
+import shutil
 
 # --------------------------------
 # General parameters
@@ -28,15 +32,41 @@ stepPrint = 100
 # Directory of DataBase
 ext = 'bmp'
 dbName = 'Tongji_Contactless_Palmprint_Dataset'
-dirDB = 'C:\PalmNet_Matlab\PalmNet\images\Tongji_Contactless_Palmprint_Dataset'
+dirDB = r'C:\Users\4300372\My stuff\TongjiDataSet\ROIs_possible'
 path = dirDB + '/*.' + ext
+
+# load model
+# model = loadmat('model.mat')
+# bestWaveletsAll = []
+# for i in range(model['bestWaveletsAll'][0].shape[0]):
+#     bestWaveletsAll.append(model['bestWaveletsAll'][0][i])
+# filter = np.real(bestWaveletsAll[0])
+# filter[:,:] = ((filter[:,:] - filter.min()) * 255) / (filter.max() - filter.min())
+# plt.imshow(filter, cmap = cm.Greys_r, origin='lower')
+# plt.show()
+
+# with open('filenameTest.txt', newline='') as f:
+#     reader = csv.reader(f)
+#     testLabels = list(reader)
+#
+# for i in range(len(testLabels)):
+#     srcPath = r'C:\Users\4300372\My stuff\TongjiDataSet\session1\\' + testLabels[i][0]
+#     disPath = r'C:\Users\4300372\My stuff\TongjiDataSet\TestImage\\' + testLabels[i][0]
+#     shutil.copy(srcPath, disPath)
+
+# Load test labels
+# with open('filenameTest.txt', newline='') as f:
+#     reader = csv.reader(f)
+#     testLabels = list(reader)
+#     for i in range(len(testLabels)):
+#         testLabels[i] = int(testLabels[i][0][:4])
 
 # --------------------------------
 # DB processing
 # Extract samples
 files = []
 for name in glob.glob(path):
-    cutName = name.split('Dataset')
+    cutName = name.split('ROIs_possible')
     files.append(cutName[1][1:])
 
 # Check that there is at least one sample for each individual
@@ -52,7 +82,7 @@ numSampleMean = getNumSamplePerInd(files)
 #   KNN Test
 #
 # Load image
-# im = cv2.imread(dirDB + "\\" + "0001_0001.bmp")
+# im = cv2.imread(dirDB + "\\" + "0003_0001.bmp")
 # if im.shape[2] == 3:
 #     im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
 #     im2double = im2double_matlab(im)
@@ -79,13 +109,13 @@ numSampleMean = getNumSamplePerInd(files)
 # featureMap = load_npz('mapFeature.npz')
 #
 # # feature extraction
-# fTest, _ = Gabor_FeaExt(im, param, bestWaveletsAll)
+# fTest, _ = Gabor_FeaExt(im2double, param, bestWaveletsAll)
 # fTest = csr_matrix(fTest).transpose()
 #
 # # compute distMatrix
 # distMat = fastEuclideanDistance(featureMap, fTest).flatten()
 # ind = np.argsort(distMat)
-#
+
 
 #__________________ SUCCESS _____________________________________
 # ------------------------------------
@@ -108,6 +138,44 @@ for r in range(param.numIterations):
     # Compute random person-fold indexes
     indexesFold, allIndexes, indImagesTrain, indImagesTest, numImageTrain, numImageTest = computeIndexesPersonFold(
         numImageAll, labels)
+
+    # with open('filenameTest.txt', newline='') as f:
+    #     reader = csv.reader(f)
+    #     filenameTest = list(reader)
+    #
+    # indImagesTest = np.zeros((6000,1), dtype= int)
+    # numImageTest = 1200
+    # for i in range(len(filenameTest)):
+    #     for j in range(len(files)):
+    #         if filenameTest[i][0] == files[j]:
+    #             indImagesTest[j] = 1
+    #
+    # # load model
+    # model = loadmat('model.mat')
+    # bestWaveletsAll = []
+    # for i in range(model['bestWaveletsAll'][0].shape[0]):
+    #     bestWaveletsAll.append(model['bestWaveletsAll'][0][i])
+
+    # print('\tLoading images for testing...')
+    # imagesCellTest, filenameTest = loadImages(files, dirDB, allIndexes, indImagesTest, numImageTest)
+    # # with open('filenameTest.txt', 'w') as f:
+    # #     for item in filenameTest:
+    # #         f.write("%s\n" % item)
+    #
+    # # ---------------------------------
+    # # Adjusting format
+    # print('\tAdjusting format...')
+    # imagesCellTest, imageSize = adjustFormat(imagesCellTest)
+    #
+    # # ---------------------------------
+    # # Feature extraction
+    # print('\tFeature extraction...')
+    # fTest_all, numFeatures = featExtrGaborAdapt(imagesCellTest, param, bestWaveletsAll, numImageTest)
+    # fTest_all = fTest_all.tocsr(True)
+    # save_npz('mapFeature.npz', fTest_all)
+    # featureMap = load_npz('mapFeature.npz')
+    #
+    #
     # Corresponding labels
     TrnLabels = []
     TestLabels = []
